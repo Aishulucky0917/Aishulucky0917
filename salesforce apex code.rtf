@@ -1,0 +1,395 @@
+{\rtf1\ansi\ansicpg1252\deff0\nouicompat\deflang1033{\fonttbl{\f0\fnil\fcharset0 Calibri;}{\f1\fnil\fcharset2 Symbol;}}
+{\colortbl ;\red255\green0\blue0;\red0\green0\blue0;}
+{\*\generator Riched20 10.0.22000}\viewkind4\uc1 
+\pard\sa200\sl276\slmult1\cf1\f0\fs52\lang9 Apex Triggers\par
+
+\pard{\pntext\f1\'B7\tab}{\*\pn\pnlvlblt\pnf1\pnindent0{\pntxtb\'B7}}\fi-360\li720\sa200\sl276\slmult1\fs32 Get Started with Apex Triggers\fs22\par
+
+\pard\sa200\sl276\slmult1\cf0\fs28 trigger AccountAddressTrigger on Account (before insert,before update) \par
+\{      \par
+ for(Account account:trigger.New)   \par
+ \{\par
+       if(account.Match_Billing_Address__c ==True)\par
+        \{\par
+        account.ShippingPostalCode = account.BillingPostalCode;\par
+     \}\par
+    \}\par
+\}\par
+
+\pard{\pntext\f1\'B7\tab}{\*\pn\pnlvlblt\pnf1\pnindent0{\pntxtb\'B7}}\fi-360\li720\sa200\sl276\slmult1\cf1 ClosedOpportunityTrigger\fs24\par
+
+\pard\sa200\sl276\slmult1\cf0\fs28 trigger ClosedOpportunityTrigger on Opportunity (after insert,after update)\par
+\{\par
+ List<Task> tasklist = new List<Task>();\par
+    for(Opportunity opp: Trigger.New)\par
+    \{\par
+        if(opp.StageName == 'Closed Won')\par
+        \{\par
+            tasklist.add(new Task(subject = 'Follow Up Test Task',WhatId = opp.Id));\par
+        \}\par
+    \}\par
+    if(tasklist.size()>0)\par
+    \{\par
+        insert tasklist;\par
+    \}\par
+\}\par
+\cf1\fs48 Apex Testing\par
+
+\pard{\pntext\f1\'B7\tab}{\*\pn\pnlvlblt\pnf1\pnindent0{\pntxtb\'B7}}\fi-360\li720\sa200\sl276\slmult1\fs32 Get Started with Apex Unit Tests\par
+
+\pard\sa200\sl276\slmult1 VerifyDate\fs44\par
+\cf0\fs28 public class VerifyDate \{ \par
+    //method to handle potential checks against two dates\par
+\tab public static Date CheckDates(Date date1, Date date2) \{\par
+\tab\tab //if date2 is within the next 30 days of date1, use date2.  Otherwise use the end of the month\par
+\tab\tab if(DateWithin30Days(date1,date2)) \{\par
+\tab\tab\tab return date2;\par
+\tab\tab\} else \{\par
+\tab\tab\tab return SetEndOfMonthDate(date1);\par
+\tab\tab\}\par
+\tab\}\par
+\tab //method to check if date2 is within the next 30 days of date1\par
+\tab @TestVisible private static Boolean DateWithin30Days(Date date1, Date date2) \{\par
+\tab\tab //check for date2 being in the past\par
+        \tab if( date2 < date1) \{ return false; \}\par
+        \par
+        \tab //check that date2 is within (>=) 30 days of date1\par
+        \tab Date date30Days = date1.addDays(30); //create a date 30 days away from date1\par
+\tab\tab if( date2 >= date30Days ) \{ return false; \}\par
+\tab\tab else \{ return true; \}\par
+\tab\}\par
+\par
+\tab //method to return the end of the month of a given date\par
+\tab  @TestVisible private static Date SetEndOfMonthDate(Date date1) \{\par
+\tab\tab Integer totalDays = Date.daysInMonth(date1.year(), date1.month());\par
+\tab\tab Date lastDay = Date.newInstance(date1.year(), date1.month(), totalDays);\par
+\tab\tab return lastDay;\par
+\tab\}\par
+\}\par
+\cf1\fs32 TestVerifyDate\par
+\cf0\fs28 @isTest\par
+private class TestVerifyDate \{\par
+   @isTest static void Test_CheckDates_case1()\par
+     \{\par
+      Date D = VerifyDate.CheckDates(date.parse('01/01/2020'),date.parse('01/05/2020'));\par
+      System.assertEquals(date.parse('01/05/2020'),D);\par
+      \}\par
+    @isTest static void Test_CheckDates_case2()\par
+     \{\par
+      Date D = VerifyDate.CheckDates(date.parse('01/01/2020'),date.parse('05/05/2020'));\par
+      System.assertEquals(date.parse('01/31/2020'),D);\par
+      \}\par
+    @isTest static void Test_DateWithin30Days_case1()\par
+     \{\par
+      Boolean flag = VerifyDate.DateWithin30Days(date.parse('01/01/2020'),date.parse('12/30/2019'));\par
+      System.assertEquals(false,flag);\par
+      \}\par
+     @isTest static void Test_DateWithin30Days_case2()\par
+     \{\par
+      Boolean flag = VerifyDate.DateWithin30Days(date.parse('01/01/2020'),date.parse('02/02/2020'));\par
+      System.assertEquals(false,flag);\par
+      \}\par
+     @isTest static void Test_DateWithin30Days_case3()\par
+     \{\par
+      Boolean flag = VerifyDate.DateWithin30Days(date.parse('01/01/2020'),date.parse('01/15/2020'));\par
+      System.assertEquals(True,flag);\par
+      \}\par
+    @isTest static void Test_SetEndOfMonthDate()\{\par
+        Date returndate = VerifyDate.SetEndOfMonthDate(date.parse('01/01/2020'));\par
+    \}\par
+    \}\par
+\cf1\b\fs36 Test Apex Triggers\b0\fs24\par
+
+\pard\sa200\sl240\slmult1\b\fs28 RestrictContactByName\b0\fs22\par
+
+\pard\sa200\sl276\slmult1\cf2\b\fs24 trigger RestrictContactByName on Contact (before insert, before update) \par
+\{\par
+\tab //check contacts prior to insert or update for invalid data\par
+\tab For (Contact c : Trigger.New) \par
+    \{\par
+\tab\tab if(c.LastName == 'INVALIDNAME')\par
+        \{\tab //invalidname is invalid\par
+\tab\tab\tab c.AddError('The Last Name "'+c.LastName+'" is not allowed for DML');\par
+\tab\tab\}\par
+    \}\par
+\}\par
+\cf1\b0\fs32 RestrictContactByName\fs24\par
+\cf0\fs32 trigger RestrictContactByName on Contact (before insert, before update) \par
+\{\par
+\tab //check contacts prior to insert or update for invalid data\par
+\tab For (Contact c : Trigger.New) \par
+    \{\par
+\tab\tab if(c.LastName == 'INVALIDNAME')\par
+        \{\tab //invalidname is invalid\par
+\tab\tab\tab c.AddError('The Last Name "'+c.LastName+'" is not allowed for DML');\par
+\tab\tab\}\par
+  \}\par
+\}\par
+\cf1 TestRestrictContactByName\fs24\par
+\cf0\fs32 @isTest\par
+public class TestRestrictContactByName \{\par
+ @isTest static void Test_insertupdateContect()\par
+  \{\par
+      Contact cnt = new Contact();\par
+      cnt.LastName = 'INVALIDNAME';\par
+      Test.startTest();\par
+      Database.SaveResult result =Database.insert(cnt,false);\par
+      Test.stopTest();\par
+      System.assert(!result.isSuccess());\par
+      System.assert(result.getErrors().size ()> 0);\par
+      System.assertEquals('The Last Name "INVALIDNAME" is not allowed for DML',result.getErrors()[0].getMessage());\par
+       \}\par
+\}\par
+\cf1\fs40 Create Test Data for Apex Tests\cf0\fs32\par
+
+\pard{\pntext\f1\'B7\tab}{\*\pn\pnlvlblt\pnf1\pnindent0{\pntxtb\'B7}}\fi-360\li720\sa200\sl276\slmult1\cf1 RandomContactFactory\fs28\par
+
+\pard\sa200\sl276\slmult1\cf0 public class RandomContactFactory \{\par
+    public static List<Contact> generateRandomContacts(Integer numcnt ,string lastname)\par
+    \{\par
+       List<Contact> contacts = new List<Contact>();\par
+        for(Integer i=0;i<numcnt;i++)\par
+        \{\par
+            Contact cnt = new Contact(FirstName = 'Test'+i,LastName = lastname);\par
+            contacts.add(cnt);\par
+        \}\par
+        return contacts;\par
+ \}\par
+\}\fs32\par
+\cf1\fs44 Asynchronous Apex\par
+
+\pard{\pntext\f1\'B7\tab}{\*\pn\pnlvlblt\pnf1\pnindent0{\pntxtb\'B7}}\fi-360\li720\sa200\sl276\slmult1\fs36 Use Future Methods\par
+
+\pard\sa200\sl276\slmult1\cf0\fs32 public class AccountProcessor \par
+\{\par
+ @future\par
+  public static void countContacts(List<Id> accountIds)\par
+  \{\par
+      List<Account> accountsToUpdate = new List<Account>();\par
+      List<Account> accounts =[Select Id,Name,(Select Id from Contacts)from Account Where Id in :accountIds];\par
+      For(Account acc:accounts)\par
+      \{\par
+          List<Contact> contactList = acc.Contacts;\par
+          acc.Number_of_Contacts__c = contactList.size();\par
+          accountsToUpdate.add(acc);\par
+      \}\par
+      update accountsToUpdate;\par
+      \}\par
+       \cf1\fs36 AccountProcessorTest\par
+\cf0\fs28 @IsTest\par
+private class AccountProcessorTest\par
+\{\par
+    @IsTest\par
+    private static void testCountCountacts()\par
+    \{\par
+        Account newAccount = new Account(Name='Test Account');\par
+        insert newAccount;\par
+        Contact newContact1 = new Contact(FirstName='John',LastName='Doe',AccountId=newAccount.Id);\par
+        insert newContact1;\par
+       Contact newContact2 = new Contact(FirstName='Jane',LastName='Doe',AccountId=newAccount.Id);\par
+        insert  newContact2;\par
+         List<Id> accountIds = new List<Id>();\par
+        accountIds.add(newAccount.Id);\par
+        Test.startTest();\par
+        AccountProcessor.countContacts(accountIds);\par
+        Test.stopTest();\par
+    \}\par
+    \}\par
+
+\pard{\pntext\f1\'B7\tab}{\*\pn\pnlvlblt\pnf1\pnindent0{\pntxtb\'B7}}\fi-360\li720\sa200\sl276\slmult1\cf1\fs40 Use Batch Apex\par
+
+\pard\sa200\sl276\slmult1\fs36 LeadProcessor\par
+\cf0\fs28 global class LeadProcessor implements Database.Batchable<sObject> \{\par
+    global Integer count = 0;\par
+    global Database.QueryLocator start(Database.BatchableContext bc)\{\par
+        return Database.getQueryLocator('SELECT ID,LeadSource FROM Lead');\par
+    \}\par
+    global void execute(Database.BatchableContext bc, List<Lead> L_list)\{\par
+       List<lead> L_list_new = new List<lead>();\par
+        for(lead L:L_list)\{\par
+            L.leadsource ='Dreamforce';\par
+            L_list_new.add(L);\par
+            count += 1;\par
+        \}\par
+     update l_list_new;   \par
+    \}\par
+    global void finish(Database.BatchableContext bc)\{\par
+    system.debug('count =' +count);\par
+\}\par
+\}\par
+\cf1\fs36 LeadProcessorTest\par
+\cf0\fs28 @isTest\par
+
+\pard\sa200\sl276\slmult1 private class LeadProcessorTest \{\par
+ @istest\par
+
+\pard\sa200\sl276\slmult1     public static void testit() \{\par
+        List<lead> L_list = new List<lead>();\par
+          for (Integer i=0;i<200;i++) \{\par
+            Lead L = new lead();\par
+            L.LastName = 'name' + i;\par
+            L.Company = 'Company';\par
+            L.Status = 'Random Status';\par
+            L_list.add(L);\par
+        \}\par
+        insert L_list;\par
+        Test.startTest();\par
+        LeadProcessor lp = new LeadProcessor();\par
+        Id batchId = Database.executeBatch(lp);\par
+        Test.stopTest();\par
+    \}\par
+\}\par
+
+\pard{\pntext\f1\'B7\tab}{\*\pn\pnlvlblt\pnf1\pnindent0{\pntxtb\'B7}}\fi-360\li720\sa200\sl276\slmult1\cf1\fs40 Control Processes with Queueable Apex\cf0\fs32\par
+
+\pard\sa200\sl276\slmult1\cf1 AddPrimaryContact\par
+\cf0\fs28 public class AddPrimaryContact implements Queueable \{\par
+    private Contact con;\par
+    private String state;\par
+    public AddPrimaryContact(Contact con,String state) \{\par
+        this.con = con;\par
+        this.state = state;\par
+    \}\par
+    public void execute(QueueableContext context) \{\par
+        List<Account> accounts = [Select Id, Name ,(Select Firstname, Lastname, Id from contacts)\par
+                                from Account where BillingState = :state Limit 200];\par
+        List<Contact> primaryContacts = new List<Contact>();\par
+        for(Account acc : accounts)\{\par
+            Contact c = con.clone();\par
+            c.AccountId = acc.Id;\par
+            primaryContacts.add(c);\par
+             \}\par
+        if(primaryContacts.size()>0)\{\par
+            insert primaryContacts;\par
+        \}\par
+        \}\par
+     \}\par
+           public class AddPrimaryContact implements Queueable \{\par
+    \tab     private Contact con;\par
+\tab     private String state;\par
+\tab     public AddPrimaryContact(Contact con,String state) \{\par
+\tab         this.con = con;\par
+\tab         this.state = state;\par
+\tab     \}\par
+\tab     public void execute(QueueableContext context) \{\par
+\tab         List<Account> accounts = [Select Id, Name ,(Select Firstname, Lastname, Id from contacts)\par
+\tab                                 from Account where BillingState = :state Limit 200];\par
+        List<Contact> primaryContacts = new List<Contact>();\par
+        for(Account acc : accounts)\{\par
+            Contact c = con.clone();\par
+\tab             c.AccountId = acc.Id;\par
+\tab             primaryContacts.add(c);\par
+\tab              \}\par
+\tab         if(primaryContacts.size()>0)\{\par
+\tab             insert primaryContacts;\par
+                     \}\par
+                \}\par
+              \}\par
+\tab public class AddPrimaryContact implements Queueable \{\par
+\tab     private Contact con;\par
+\tab     private String state;\par
+\tab     public AddPrimaryContact(Contact con,String state) \{\par
+\tab         this.con = con;\par
+\tab         this.state = state;\par
+\tab     \}\par
+\tab     public void execute(QueueableContext context) \{\par
+\tab         List<Account> accounts = [Select Id, Name ,(Select Firstname, Lastname, Id from contacts)\par
+\tab                                 from Account where BillingState = :state Limit 200];\par
+        List<Contact> primaryContacts = new List<Contact>();\par
+\tab       for(Account acc : accounts)\{\par
+\tab             Contact c = con.clone();\par
+\tab             c.AccountId = acc.Id;\par
+\tab             primaryContacts.add(c);\par
+             \}\par
+        if(primaryContacts.size()>0)\{\par
+            insert primaryContacts;\par
+        \}\par
+        \}\par
+     \}\par
+
+\pard{\pntext\f1\'B7\tab}{\*\pn\pnlvlblt\pnf1\pnindent0{\pntxtb\'B7}}\fi-360\li720\sa200\sl276\slmult1\cf1\fs44 Control Processes with Queueable Apex\par
+
+\pard\sa200\sl276\slmult1\fs32 AddPrimaryContact\cf0\par
+\fs28 public class AddPrimaryContact implements Queueable \{\par
+    private Contact con;\par
+    private String state;\par
+    public AddPrimaryContact(Contact con,String state) \{\par
+        this.con = con;\par
+        this.state = state;\par
+    \}\par
+    public void execute(QueueableContext context) \{\par
+        List<Account> accounts = [Select Id, Name ,(Select Firstname, Lastname, Id from contacts)\par
+                                from Account where BillingState = :state Limit 200];\par
+        List<Contact> primaryContacts = new List<Contact>();\par
+        for(Account acc : accounts)\{\par
+            Contact c = con.clone();\par
+            c.AccountId = acc.Id;\par
+            primaryContacts.add(c);\par
+             \}\par
+        if(primaryContacts.size()>0)\{\par
+            insert primaryContacts;\par
+        \}\par
+        \}\par
+     \}\par
+\cf1\fs32 AddPrimaryContactTest\par
+\cf0\fs28 @isTest\par
+public class AddPrimaryContactTest \{\par
+  static testmethod void testQueueable() \{\par
+        List<Account> testaccounts = new List<Account>();\par
+           for (Integer i = 0; i < 50; i++) \{\par
+            testaccounts.add(new Account(Name='Account'+i,BillingState='CA'));\par
+        \}\par
+         for (Integer j = 0; j < 50; j++) \{\par
+            testaccounts.add(new Account(Name='Account'+j,BillingState='Ny' ));\par
+        insert testAccounts;\par
+             Contact testContact = new Contact(Firstname ='John',Lastname = 'Doe');\par
+        insert testContact;\par
+             AddPrimaryContact addit = new addPrimaryContact(testContact,'CA');\par
+       Test.startTest();\par
+             System.enqueueJob(addit);\par
+             Test.stopTest();\par
+             System.assertEquals(50, [select count() from Contact where accountId in (Select Id from Account where BillingState='CA')]);\par
+    \}\par
+    \}\par
+\}\par
+
+\pard{\pntext\f1\'B7\tab}{\*\pn\pnlvlblt\pnf1\pnindent0{\pntxtb\'B7}}\fi-360\li720\sa200\sl276\slmult1\cf1\fs36   Schedule Jobs Using the Apex Scheduler\cf0\par
+
+\pard\sa200\sl276\slmult1\cf1 Daily Lead Processor\par
+\cf0\fs28 global class DailyLeadProcessor implements Schedulable\{\par
+\tab global void execute(SchedulableContext ctx)\{\par
+\tab\tab List<Lead> leads = [SELECT Id, LeadSource FROM Lead WHERE LeadSource = ''];\par
+     if(leads.size() > 0)\{\par
+\tab\tab List<Lead> newLeads = new List<Lead>();\par
+        for(Lead lead : leads)\{\par
+\tab\tab lead.LeadSource = 'DreamForce';\par
+\tab\tab newLeads.add(lead);\par
+\tab    \}\par
+\tab\tab update newLeads;\par
+\tab\}\par
+  \}\par
+\}\par
+\cf1\fs36 DailyLeadProcessorTest\par
+\cf0\fs28 @isTest\par
+private class DailyLeadProcessorTest\{\par
+//Seconds Minutes Hours Day_of_month Month Day_of_week optional_year\par
+public static String CRON_EXP = '0 0 0 2 4 ? 2023';\par
+    static testmethod void testScheduledJob()\{\par
+\tab List<Lead> leads = new List<Lead>();\par
+    for(Integer i = 0; i < 200; i++)\{\par
+\tab\tab Lead lead = new Lead(LastName = 'Test ' + i, LeadSource = '', Company = 'TestCompany ' + i, Status = 'Open - Not Contacted');\par
+\tab\tab leads.add(lead);\par
+\tab\}\par
+\tab insert leads;\par
+ Test.startTest();\par
+\tab // Schedule the test job\par
+\tab String jobId = System.schedule('Update LeadSource to DreamForce', CRON_EXP, new DailyLeadProcessor());\par
+\tab\par
+    // Stopping the test will run the job synchronously\par
+    Test.stopTest();\par
+  \}\par
+\}\par
+\fs36\par
+\par
+}
+ 
