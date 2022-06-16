@@ -1,0 +1,525 @@
+{\rtf1\ansi\ansicpg1252\deff0\nouicompat\deflang1033{\fonttbl{\f0\fnil\fcharset0 Calibri;}}
+{\colortbl ;\red0\green0\blue255;}
+{\*\generator Riched20 10.0.22000}\viewkind4\uc1 
+\pard\sa200\sl276\slmult1\f0\fs22\lang9   \tab\tab\tab\tab Apex Triggers\par
+Get Started with Apex Triggers\par
+AccountAddressTrigger.apex\par
+trigger AccountAddressTrigger on Account (before insert,before update) \par
+\{      \par
+ for(Account account:trigger.New)   \par
+ \{\par
+       if(account.Match_Billing_Address__c ==True)\par
+        \{\par
+        account.ShippingPostalCode = account.BillingPostalCode;\par
+     \}\par
+    \}\par
+\}\par
+  Bulk Apex Triggers  \par
+ClosedOpportunityTrigger.apxt\par
+trigger ClosedOpportunityTrigger on Opportunity (after insert,after update)\par
+\{\par
+ List<Task> task list = new List<Task>();\par
+    for(Opportunity opp: Trigger.New)\par
+    \{\par
+        if(opp.StageName == 'Closed Won')\par
+   \{\par
+ task list.add(new Task(subject = 'Follow Up Test Task',WhatId = opp.Id));\par
+        \}\par
+    \}\par
+    if(tasklist.size()>0)\par
+    \{\par
+        insert tasklist;\par
+    \}\par
+\}\par
+                           Apex Testing\par
+Get Started with Apex Unit Tests\par
+VerifyDate.apxc\par
+public class VerifyDate \{ \par
+    //method to handle potential checks against two dates\par
+            public static Date CheckDates(Date date1, Date date2) \{\par
+                        //if date2 is within the next 30 days of date1, use date2.  Otherwise use the end of the month\par
+                        if(DateWithin30Days(date1,date2)) \{\par
+                                    return date2;\par
+                        \} else \{\par
+                                    return SetEndOfMonthDate(date1);\par
+                        \}\par
+            \}\par
+            //method to check if date2 is within the next 30 days of date1\par
+            @TestVisible private static Boolean DateWithin30Days(Date date1, Date date2) \{\par
+                        //check for date2 being in the past\par
+            if( date2 < date1) \{ return false; \}\par
+        \par
+            //check that date2 is within (>=) 30 days of date1\par
+            Date date30Days = date1.addDays(30); //create a date 30 days away from date1\par
+                        if( date2 >= date30Days ) \{ return false; \}\par
+                        else \{ return true; \}\par
+            \}\par
+ \par
+            //method to return the end of the month of a given date\par
+             @TestVisible private static Date SetEndOfMonthDate(Date date1) \{\par
+                        Integer totalDays = Date.daysInMonth(date1.year(), date1.month());\par
+                        Date lastDay = Date.newInstance(date1.year(), date1.month(), totalDays);\par
+                        return lastDay;\par
+            \}\par
+\}\par
+TestVerifyDate.apxc\par
+@isTest\par
+private class TestVerifyDate \{\par
+   @isTest static void Test_CheckDates_case1()\par
+     \{\par
+      Date D = VerifyDate.CheckDates(date.parse('01/01/2020'),date.parse('01/05/2020'));\par
+      System.assertEquals(date.parse('01/05/2020'),D);\par
+      \}\par
+    @isTest static void Test_CheckDates_case2()\par
+     \{\par
+      Date D = VerifyDate.CheckDates(date.parse('01/01/2020'),date.parse('05/05/2020'));\par
+      System.assertEquals(date.parse('01/31/2020'),D);\par
+      \}\par
+    @isTest static void Test_DateWithin30Days_case1()\par
+     \{\par
+      Boolean flag = VerifyDate.DateWithin30Days(date.parse('01/01/2020'),date.parse('12/30/2019'));\par
+      System.assertEquals(false,flag);\par
+      \}\par
+     @isTest static void Test_DateWithin30Days_case2()\par
+     \{\par
+      Boolean flag = VerifyDate.DateWithin30Days(date.parse('01/01/2020'),date.parse('02/02/2020'));\par
+      System.assertEquals(false,flag);\par
+      \}\par
+     @isTest static void Test_DateWithin30Days_case3()\par
+     \{\par
+      Boolean flag = VerifyDate.DateWithin30Days(date.parse('01/01/2020'),date.parse('01/15/2020'));\par
+      System.assertEquals(True,flag);\par
+      \}\par
+    @isTest static void Test_SetEndOfMonthDate()\{\par
+        Date returndate = VerifyDate.SetEndOfMonthDate(date.parse('01/01/2020'));\par
+    \}\par
+    \}\par
+ Test Apex Triggers\par
+RestrictContactByName.apxt\par
+trigger RestrictContactByName on Contact (before insert, before update) \par
+\{\par
+          //check contacts prior to insert or update for invalid data\par
+          For (Contact c : Trigger.New) \par
+    \{\par
+                   if(c.LastName == 'INVALIDNAME')\par
+        \{          //invalidname is invalid\par
+                             c.AddError('The Last Name "'+c.LastName+'" is not allowed for DML');\par
+                   \}\par
+  \}\par
+\}\par
+TestRestrictContactByName.apxc\par
+@isTest\par
+public class TestRestrictContactByName \{\par
+ @isTest static void Test_insertupdateContect()\par
+  \{\par
+      Contact cnt = new Contact();\par
+      cnt.LastName = 'INVALIDNAME';\par
+      Test.startTest();\par
+      Database.SaveResult result =Database.insert(cnt,false);\par
+      Test.stopTest();\par
+      System.assert(!result.isSuccess());\par
+      System.assert(result.getErrors().size ()> 0);\par
+      System.assertEquals('The Last Name "INVALIDNAME" is not allowed for DML',result.getErrors()[0].getMessage());\par
+       \}\par
+\}\par
+                  Create Test Data for Apex Tests\par
+RandomContactFactory.apxc\par
+public class RandomContactFactory \{\par
+    public static List<Contact> generateRandomContacts(Integer numcnt ,string lastname)\par
+    \{\par
+       List<Contact> contacts = new List<Contact>();\par
+        for(Integer i=0;i<numcnt;i++)\par
+        \{\par
+            Contact cnt = new Contact(FirstName = 'Test'+i,LastName = lastname);\par
+            contacts.add(cnt);\par
+        \}\par
+        return contacts;\par
+ \}\par
+\}\par
+                        Asynchronous Apex\par
+Use Future Methods\par
+AccountProcreeor.apxc\par
+public class AccountProcessor \par
+\{\par
+ @future\par
+  public static void countContacts(List<Id> accountIds)\par
+  \{\par
+      List<Account> accountsToUpdate = new List<Account>();\par
+      List<Account> accounts =[Select Id,Name,(Select Id from Contacts)from Account Where Id in :accountIds];\par
+      For(Account acc:accounts)\par
+      \{\par
+          List<Contact> contactList = acc.Contacts;\par
+          acc.Number_of_Contacts__c = contactList.size();\par
+          accountsToUpdate.add(acc);\par
+      \}\par
+      update accountsToUpdate;\par
+      \}\par
+  AccountProcessorTest.apxc\par
+@IsTest\par
+private class AccountProcessorTest\par
+\{\par
+    @IsTest\par
+    private static void testCountCountacts()\par
+    \{\par
+        Account newAccount = new Account(Name='Test Account');\par
+        insert newAccount;\par
+        Contact newContact1 = new Contact(FirstName='John',LastName='Doe',AccountId=newAccount.Id);\par
+        insert newContact1;\par
+       Contact newContact2 = new Contact(FirstName='Jane',LastName='Doe',AccountId=newAccount.Id);\par
+        insert  newContact2;\par
+         List<Id> accountIds = new List<Id>();\par
+        accountIds.add(newAccount.Id);\par
+        Test.startTest();\par
+        AccountProcessor.countContacts(accountIds);\par
+        Test.stopTest();\par
+    \}\par
+    \}\par
+Use Batch Apex\par
+LeadProcessor.apxc\par
+global class LeadProcessor implements Database.Batchable<sObject> \{\par
+    global Integer count = 0;\par
+    global Database.QueryLocator start(Database.BatchableContext bc)\{\par
+        return Database.getQueryLocator('SELECT ID,LeadSource FROM Lead');\par
+    \}\par
+    global void execute(Database.BatchableContext bc, List<Lead> L_list)\{\par
+       List<lead> L_list_new = new List<lead>();\par
+        for(lead L:L_list)\{\par
+            L.leadsource ='Dreamforce';\par
+            L_list_new.add(L);\par
+            count += 1;\par
+        \}\par
+     update l_list_new;   \par
+    \}\par
+    global void finish(Database.BatchableContext bc)\{\par
+    system.debug('count =' +count);\par
+\}\par
+\}\par
+LeadProcessorTest.apxc\par
+@isTest\par
+private class LeadProcessorTest \{\par
+ @istest\par
+    public static void testit() \{\par
+        List<lead> L_list = new List<lead>();\par
+          for (Integer i=0;i<200;i++) \{\par
+            Lead L = new lead();\par
+            L.LastName = 'name' + i;\par
+            L.Company = 'Company';\par
+            L.Status = 'Random Status';\par
+            L_list.add(L);\par
+        \}\par
+        insert L_list;\par
+        Test.startTest();\par
+        LeadProcessor lp = new LeadProcessor();\par
+        Id batchId = Database.executeBatch(lp);\par
+        Test.stopTest();\par
+    \}\par
+\}\par
+Control Processes with Queueable Apex\par
+AddPrimaryContact.apcx\par
+public class AddPrimaryContact implements Queueable \{\par
+    private Contact con;\par
+    private String state;\par
+    public AddPrimaryContact(Contact con,String state) \{\par
+        this.con = con;\par
+        this.state = state;\par
+    \}\par
+    public void execute(QueueableContext context) \{\par
+        List<Account> accounts = [Select Id, Name ,(Select Firstname, Lastname, Id from contacts)\par
+                                from Account where BillingState = :state Limit 200];\par
+        List<Contact> primaryContacts = new List<Contact>();\par
+        for(Account acc : accounts)\{\par
+            Contact c = con.clone();\par
+            c.AccountId = acc.Id;\par
+            primaryContacts.add(c);\par
+             \}\par
+        if(primaryContacts.size()>0)\{\par
+            insert primaryContacts;\par
+        \}\par
+        \}\par
+     \}\par
+  AddPrimaryContactTest.apxc\par
+@isTest\par
+public class AddPrimaryContactTest \{\par
+  static testmethod void testQueueable() \{\par
+        List<Account> testaccounts = new List<Account>();\par
+           for (Integer i = 0; i < 50; i++) \{\par
+            testaccounts.add(new Account(Name='Account'+i,BillingState='CA'));\par
+        \}\par
+         for (Integer j = 0; j < 50; j++) \{\par
+            testaccounts.add(new Account(Name='Account'+j,BillingState='Ny' ));\par
+        insert testAccounts;\par
+             Contact testContact = new Contact(Firstname ='John',Lastname = 'Doe');\par
+        insert testContact;\par
+             AddPrimaryContact addit = new addPrimaryContact(testContact,'CA');\par
+       Test.startTest();\par
+             System.enqueueJob(addit);\par
+             Test.stopTest();\par
+             System.assertEquals(50, [select count() from Contact where accountId in (Select Id from Account where BillingState='CA')]);\par
+    \}\par
+    \}\par
+\}\par
+  Schedule Jobs Using the Apex Scheduler\par
+Daily Lead Processor.apxc\par
+global class DailyLeadProcessor implements Schedulable\{\par
+            global void execute(SchedulableContext ctx)\{\par
+                        List<Lead> leads = [SELECT Id, LeadSource FROM Lead WHERE LeadSource = ''];\par
+     if(leads.size() > 0)\{\par
+                        List<Lead> newLeads = new List<Lead>();\par
+        for(Lead lead : leads)\{\par
+                        lead.LeadSource = 'DreamForce';\par
+                        newLeads.add(lead);\par
+               \}\par
+                        update newLeads;\par
+            \}\par
+  \}\par
+\}\par
+DailyLeadProcessorTest.apxc\par
+@isTest\par
+private class DailyLeadProcessorTest\{\par
+//Seconds Minutes Hours Day_of_month Month Day_of_week optional_year\par
+public static String CRON_EXP = '0 0 0 2 4 ? 2023';\par
+    static testmethod void testScheduledJob()\{\par
+            List<Lead> leads = new List<Lead>();\par
+    for(Integer i = 0; i < 200; i++)\{\par
+                        Lead lead = new Lead(LastName = 'Test ' + i, LeadSource = '', Company = 'TestCompany ' + i, Status = 'Open - Not Contacted');\par
+                        leads.add(lead);\par
+            \}\par
+            insert leads;\par
+ Test.startTest();\par
+            // Schedule the test job\par
+            String jobId = System.schedule('Update LeadSource to DreamForce', CRON_EXP, new DailyLeadProcessor());\par
+            \par
+    // Stopping the test will run the job synchronously\par
+    Test.stopTest();\par
+  \}\par
+\}\par
+     APEX INTEGRATION SERVICES\par
+ Apex REST Callouts\par
+ AnimalLocator.apxc\par
+public class AnimalLocator\par
+\{\par
+public static String getAnimalNameById(Integer id)\par
+\{\par
+Http http = new Http();\par
+HttpRequest request = new HttpRequest();\par
+request.setEndpoint('https://th-apex-http-callout.herokuapp.com/animals/'+id);\par
+request.setMethod('GET');\par
+HttpResponse response = http.send(request);\par
+String strResp = '';\par
+system.debug('******response '+response.getStatusCode());\par
+system.debug('******response '+response.getBody());\par
+// If the request is successful, parse the JSON response.\par
+if (response.getStatusCode() == 200)\par
+\{\par
+// Deserializes the JSON string into collections of primitive data types.\par
+Map<String, Object> results = (Map<String, Object>)\par
+JSON.deserializeUntyped(response.getBody());\par
+// Cast the values in the 'animals' key as a list\par
+Map<string,object> animals = (map<string,object>) results.get('animal');\par
+System.debug('Received the following animals:' + animals );\par
+strResp = string.valueof(animals.get('name'));\par
+System.debug('strResp >>>>>>' + strResp );\par
+\}\par
+return strResp ;\par
+\}\par
+\}\par
+AnimalLocatorTest.apxc\par
+@isTest\par
+private class AnimalLocatorTest\{\par
+@isTest static void AnimalLocatorMock1() \{\par
+Test.SetMock(HttpCallOutMock.class, new AnimalLocatorMock());\par
+string result=AnimalLocator.getAnimalNameById(3);\par
+string expectedResult='chicken';\par
+System.assertEquals(result, expectedResult);\par
+\}\par
+\}\par
+AnimalLocatorMock.apxc\par
+@isTest\par
+global class AnimalLocatorMock implements HttpCalloutMock \{\par
+global HTTPResponse respond(HTTPRequest request) \{\par
+HttpResponse response = new HttpResponse();\par
+response.setHeader('Content-Type', 'application/json');\par
+response.setBody('\{"animal":\{"id":1,"name":"chicken","eats":"chicken food","says":"cluckcluck"\}\}');\par
+response.setStatusCode(200);\par
+return response;\par
+\}\par
+\}\par
+ Apex SOAP Callouts\par
+ParkService.apxc\par
+//Generated by wsdl2apex\par
+\par
+public class ParkService \{\par
+    public class byCountryResponse \{\par
+        public String[] return_x;\par
+        private String[] return_x_type_info = new String[]\{'return','http://parks.services/',null,'0','-1','false'\};\par
+        private String[] apex_schema_type_info = new String[]\{'http://parks.services/','false','false'\};\par
+        private String[] field_order_type_info = new String[]\{'return_x'\};\par
+    \}\par
+    public class byCountry \{\par
+        public String arg0;\par
+        private String[] arg0_type_info = new String[]\{'arg0','http://parks.services/',null,'0','1','false'\};\par
+        private String[] apex_schema_type_info = new String[]\{'http://parks.services/','false','false'\};\par
+        private String[] field_order_type_info = new String[]\{'arg0'\};\par
+    \}\par
+    public class ParksImplPort \{\par
+        public String endpoint_x = '{{\field{\*\fldinst{HYPERLINK https://th-apex-soap-service.herokuapp.com/service/parks }}{\fldrslt{https://th-apex-soap-service.herokuapp.com/service/parks\ul0\cf0}}}}\f0\fs22 ';\par
+        public Map<String,String> inputHttpHeaders_x;\par
+        public Map<String,String> outputHttpHeaders_x;\par
+        public String clientCertName_x;\par
+        public String clientCert_x;\par
+        public String clientCertPasswd_x;\par
+        public Integer timeout_x;\par
+        private String[] ns_map_type_info = new String[]\{'http://parks.services/', 'ParkService'\};\par
+        public String[] byCountry(String arg0) \{\par
+            ParkService.byCountry request_x = new ParkService.byCountry();\par
+            request_x.arg0 = arg0;\par
+            ParkService.byCountryResponse response_x;\par
+            Map<String, ParkService.byCountryResponse> response_map_x = new Map<String, ParkService.byCountryResponse>();\par
+            response_map_x.put('response_x', response_x);\par
+            WebServiceCallout.invoke(\par
+              this,\par
+              request_x,\par
+              response_map_x,\par
+              new String[]\{endpoint_x,\par
+              '',\par
+              '{{\field{\*\fldinst{HYPERLINK http://parks.services/ }}{\fldrslt{http://parks.services/\ul0\cf0}}}}\f0\fs22 ',\par
+              'byCountry',\par
+              '{{\field{\*\fldinst{HYPERLINK http://parks.services/ }}{\fldrslt{http://parks.services/\ul0\cf0}}}}\f0\fs22 ',\par
+              'byCountryResponse',\par
+              'ParkService.byCountryResponse'\}\par
+            );\par
+            response_x = response_map_x.get('response_x');\par
+            return response_x.return_x;\par
+        \}\par
+    \}\par
+\}\tab\par
+ParkLocator.apxc\par
+public class ParkLocator \{\par
+public static string[] country(string country)\par
+\{\par
+ParkService.ParksImplport prk = new ParkService.ParksImplPort();\par
+return prk.byCountry(country);\par
+\}\par
+\}\par
+parkLocatorTest.apxc\par
+@isTest\par
+public class ParkLocatorTest \{\par
+@isTest\par
+static void testCallout()\{\par
+Test.setMock(WebServiceMock.class, new ParkServiceMock());\par
+String country = 'USA';\par
+System.assertEquals(new List<String>\{'Me','You','Him'\}, ParkLocator.country(country));\par
+\}\par
+\}\par
+ParkServiceMock.apxc\par
+@isTest\par
+global class ParkserviceMock implements webserviceMock\{\par
+global void doInvoke(\par
+object stub,\par
+object request,\par
+Map<String, object> response,\par
+String endpoint,\par
+string soapAction,\par
+String requestName,\par
+String responseNS,\par
+String responseName,\par
+String responseType)\{\par
+parkService.byCountryResponse response_x = new\par
+parkService.byCountryResponse();\par
+response_x.return_x = new List<String>\{'Me','You','Her'\};\par
+response.put('response_x', response_x);\par
+\}\par
+\}\par
+AsyncParksServices.apxc\par
+//Generated by wsdl2apex\par
+\par
+public class AsyncParkService \{\par
+    public class byCountryResponseFuture extends System.WebServiceCalloutFuture \{\par
+        public String[] getValue() \{\par
+            ParkService.byCountryResponse response = (ParkService.byCountryResponse)System.WebServiceCallout.endInvoke(this);\par
+            return response.return_x;\par
+        \}\par
+    \}\par
+    public class AsyncParksImplPort \{\par
+        public String endpoint_x = '{{\field{\*\fldinst{HYPERLINK https://th-apex-soap-service.herokuapp.com/service/parks }}{\fldrslt{https://th-apex-soap-service.herokuapp.com/service/parks\ul0\cf0}}}}\f0\fs22 ';\par
+        public Map<String,String> inputHttpHeaders_x;\par
+        public String clientCertName_x;\par
+        public Integer timeout_x;\par
+        private String[] ns_map_type_info = new String[]\{'http://parks.services/', 'ParkService'\};\par
+        public AsyncParkService.byCountryResponseFuture beginByCountry(System.Continuation continuation,String arg0) \{\par
+            ParkService.byCountry request_x = new ParkService.byCountry();\par
+            request_x.arg0 = arg0;\par
+            return (AsyncParkService.byCountryResponseFuture) System.WebServiceCallout.beginInvoke(\par
+              this,\par
+              request_x,\par
+              AsyncParkService.byCountryResponseFuture.class,\par
+              continuation,\par
+              new String[]\{endpoint_x,\par
+              '',\par
+              '{{\field{\*\fldinst{HYPERLINK http://parks.services/ }}{\fldrslt{http://parks.services/\ul0\cf0}}}}\f0\fs22 ',\par
+              'byCountry',\par
+              '{{\field{\*\fldinst{HYPERLINK http://parks.services/ }}{\fldrslt{http://parks.services/\ul0\cf0}}}}\f0\fs22 ',\par
+              'byCountryResponse',\par
+              'ParkService.byCountryResponse'\}\par
+            );\par
+        \}\par
+    \}\par
+\}\par
+Apex Web Services\par
+AccountManager.apxc\par
+@RestResource(urlMapping='/Accounts/*/contacts')\par
+Global with sharing class AccountManager \{\par
+@HttpGet\par
+global static Account getAccount()\{\par
+RestRequest request = RestContext.request;\par
+//Grab the accountId from end of URL\par
+String accountId = request.requestURI.substringBetween('Accounts/','/contacts');\par
+Account acc = [select Id,Name,(select Id,Name from Contacts) from Account where Id =\par
+:accountId];\par
+system.debug('Account and Related Contacts->>>>'+acc);\par
+return acc;\par
+\}\par
+\}\par
+AccountManagerTest.apxc\par
+@isTest\par
+private class AccountManagerTest \{\par
+//Helper method to create dummy record\par
+static Id createTestRecord()\{\par
+//Create test record\par
+Account TestAcc = new Account(Name='Test Account', Phone='8786757657');\par
+insert TestAcc;\par
+List<Contact> conList = new List<Contact>();\par
+Contact TestCon = new Contact();\par
+for(Integer i=1;i<=3;i++)\{\par
+TestCon.LastName = 'Test Contact'+i;\par
+TestCon.AccountId = TestAcc.Id;\par
+//conList.add(TestCon);\par
+insert conList;//Its not best practice but I have use it for testing purposes\par
+\}\par
+//insert conList;\par
+//insert TestAcc;\par
+return TestAcc.Id;\par
+\}\par
+//Method to test getAccount()\par
+@isTest static void getAccountTest()\{\par
+Id recordId = createTestRecord();\par
+//setup a test request\par
+RestRequest request = new RestRequest();\par
+//set request properties\par
+request.requestURI =\par
+'{{\field{\*\fldinst{HYPERLINK https://yourInstance.salesforce.com/services/apexrest/Accounts/ }}{\fldrslt{https://yourInstance.salesforce.com/services/apexrest/Accounts/\ul0\cf0}}}}\f0\fs22 ' + recordId +'/contacts';\par
+request.httpMethod = 'GET';\par
+// Finally, assign the request to RestContext if used\par
+RestContext.request = request;\par
+//End test setup\par
+//Call the method\par
+Account thisAcc = AccountManager.getAccount();\par
+//Verify the result\par
+system.assert(thisAcc != null);\par
+system.assertEquals('Test Account', thisAcc.Name);\par
+//system.assertEquals(3, thisAcc.Contact__c.size()); how to get this\par
+\}\par
+\}\par
+\tab\par
+}
+ 
